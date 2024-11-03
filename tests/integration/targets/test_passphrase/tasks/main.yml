@@ -1,0 +1,100 @@
+---
+- name: Set Output File
+  set_fact:
+    output_dir: "/tmp"
+
+- name: Cleanup Any Existing Files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ output_dir }}/lookup/passphrase"
+    - "{{ output_dir }}/lookup/passphrase_with_salt"
+
+- name: create a passphrase file
+  set_fact:
+    newpass: "{{ lookup('pyrodie18.utils.passphrase', output_dir + '/lookup/passphrase min_length=12 max_length=12') }}"
+
+- name: stat the passphrase file directory
+  stat: path="{{output_dir}}/lookup"
+  register: result
+
+- name: assert the directory's permissions
+  assert:
+    that:
+    - result.stat.mode == '0700'
+
+- name: stat the passphrase file
+  stat: path="{{output_dir}}/lookup/passphrase"
+  register: result
+
+- name: assert the directory's permissions
+  assert:
+    that:
+    - result.stat.mode == '0600'
+
+- name: get passphrase length
+  shell: wc -c {{output_dir}}/lookup/passphrase | awk '{print $1}'
+  register: wc_result
+
+- debug: var=wc_result.stdout
+
+- name: read passphrase
+  shell: cat {{output_dir}}/lookup/passphrase
+  register: cat_result
+
+- debug: var=cat_result.stdout
+
+- name: verify passphrase
+  assert:
+    that:
+        - "wc_result.stdout == '13'"
+        - "cat_result.stdout == newpass"
+        - "' salt=' not in cat_result.stdout"
+
+
+- name: create a passphrase (with salt) file
+  set_fact:
+    newpass: "{{ lookup('pyrodie18.utils.passphrase', '/tmp/lookup/passphrase_with_salt min_length=12 max_length=12 encrypt=sha256_crypt') }}"
+
+- name: read passphrase and salt
+  shell: cat {{output_dir}}/lookup/passphrase_with_salt
+  register: cat_pass_salt
+
+- debug: var=cat_pass_salt.stdout
+
+- name: fetch unencrypted passphrase
+  set_fact:
+    newpass: "{{ lookup('pyrodie18.utils.passphrase', output_dir + '/lookup/passphrase_with_salt') }}"
+
+- debug: var=newpass
+
+- name: verify passphrase and salt
+  assert:
+    that:
+        - "cat_pass_salt.stdout != newpass"
+        - "cat_pass_salt.stdout.startswith(newpass)"
+        - "' salt=' in cat_pass_salt.stdout"
+        - "' salt=' not in newpass"
+
+- name: fetch unencrypted passphrase (using empty encrypt parameter)
+  set_fact:
+    newpass2: "{{ lookup('pyrodie18.utils.passphrase', output_dir + '/lookup/passphrase_with_salt encrypt=') }}"
+
+- name: verify lookup passphrase behavior
+  assert:
+    that:
+        - "newpass == newpass2"
+
+- name: verify that we can generate a 1st passphrase without writing it
+  set_fact:
+    newpass: "{{ lookup('pyrodie18.utils.passphrase', '/dev/null') }}"
+
+- name: verify that we can generate a 2nd password without writing it
+  set_fact:
+    newpass2: "{{ lookup('pyrodie18.utils.passphrase', '/dev/null') }}"
+
+- name: verify lookup passphrase behavior with /dev/null
+  assert:
+    that:
+        - "newpass != newpass2"

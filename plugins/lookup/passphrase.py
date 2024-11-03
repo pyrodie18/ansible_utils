@@ -33,6 +33,8 @@ DOCUMENTATION = """
            - If not provided, the passphrase will be returned in plain text.
            - Note that the passphrase is always stored as plain text, only the returning passphrase is encrypted.
            - Encrypt also forces saving the salt value for idempotence.
+        required: False
+        type: string
       ident:
         description:
           - Specify version of Bcrypt algorithm to be used while using O(encrypt) as V(bcrypt).
@@ -98,31 +100,20 @@ EXAMPLES = """
 - name: create a mysql user with a random passphrase
   community.mysql.mysql_user:
     name: "{{ client }}"
-    password: "{{ lookup('ansible.builtin.passphrase', 'credentials/' + client + '/' + tier + '/' + role + '/mysqlpassword', length=15) }}"
+    password: "{{ lookup('pyrodie18.utils.passphrase', 'credentials/' + client + '/' + tier + '/' + role + '/mysqlpassword') }}"
     priv: "{{ client }}_{{ tier }}_{{ role }}.*:ALL"
 
-- name: create a mysql user with a random passphrase using only ascii letters
+- name: create a mysql user with a random passphrase using only letters and numbers
   community.mysql.mysql_user:
     name: "{{ client }}"
-    password: "{{ lookup('ansible.builtin.passphrase', '/tmp/passwordfile', chars=['ascii_letters']) }}"
+    password: "{{ lookup('pyrodie18.utils.passphrase', '/tmp/passwordfile', use_specials=False) }}"
     priv: '{{ client }}_{{ tier }}_{{ role }}.*:ALL'
 
-- name: create a mysql user with an 8 character random passphrase using only digits
+- name: create a mysql user with an 12 character random passphrase
   community.mysql.mysql_user:
     name: "{{ client }}"
-    password: "{{ lookup('ansible.builtin.passphrase', '/tmp/passwordfile', length=8, chars=['digits']) }}"
+    password: "{{ lookup('pyrodie18.utils.passphrase', '/tmp/passwordfile', max_length=12, min_length=12) }}"
     priv: "{{ client }}_{{ tier }}_{{ role }}.*:ALL"
-
-- name: create a mysql user with a random passphrase using many different char sets
-  community.mysql.mysql_user:
-    name: "{{ client }}"
-    password: "{{ lookup('ansible.builtin.passphrase', '/tmp/passwordfile', chars=['ascii_letters', 'digits', 'punctuation']) }}"
-    priv: "{{ client }}_{{ tier }}_{{ role }}.*:ALL"
-
-- name: create lowercase 8 character name for Kubernetes pod name
-  ansible.builtin.set_fact:
-    random_pod_name: "web-{{ lookup('ansible.builtin.passphrase', '/dev/null', chars=['ascii_lowercase', 'digits'], length=8) }}"
-
 """
 
 RETURN = """
@@ -147,7 +138,7 @@ from ansible.utils.encrypt import BaseHash, do_encrypt, random_password, random_
 from ansible.utils.path import makedirs_safe
 
 
-VALID_PARAMS = frozenset(('encrypt', 'ident', 'seed', 'min_length', 'max_length', 'use_caps', 'use_numbers', 'use_specials', 'min_numbers', 'min_specials', 'excluded_specials'))
+VALID_PARAMS = frozenset(('encrypt', 'ident', 'min_length', 'max_length', 'use_caps', 'use_numbers', 'use_specials', 'min_numbers', 'min_specials', 'excluded_specials'))
 
 
 WORDS = {
@@ -246,6 +237,12 @@ def _format_content(password, salt, encrypt=None, ident=None):
 
 
 def _write_password_file(b_path, content):
+    '''
+    Writes the password, salt, and ident to the file
+    :arg b_path: A byte string containing the path to the password file
+    :arg content: The plaintext password, salt, and ident to write
+    :returns: None
+    '''
     b_pathdir = os.path.dirname(b_path)
     makedirs_safe(b_pathdir, mode=0o700)
 
@@ -256,7 +253,11 @@ def _write_password_file(b_path, content):
 
 
 def _get_lock(b_path):
-    """Get the lock for writing password file."""
+    '''
+    Get the lock for writing password file.
+    :arg b_path: A byte string containing the path to the password file
+    :returns: None
+    '''
     first_process = False
     b_pathdir = os.path.dirname(b_path)
     lockfile_name = to_bytes("%s.ansible_lockfile" % hashlib.sha1(b_path).hexdigest())
@@ -284,12 +285,18 @@ def _get_lock(b_path):
 
 
 def _release_lock(lockfile):
-    """Release the lock so other processes can read the password file."""
+    '''
+    Release the lock so other processes can read the password file
+    '''
     if os.path.exists(lockfile):
         os.remove(lockfile)
 
 def _get_key_layout(target):
-    """Determines the randomized pattern of word length that will be used."""
+    '''
+    Determines the randomized pattern of word length that will be used.
+    :arg target: The target length for the password
+    :returns: A randomly selected pattern of word lengths for the passphrase.
+    '''
     from math import ceil
     from random import randint
     from itertools import permutations
@@ -328,6 +335,13 @@ def _get_key_layout(target):
     return word_layout
 
 def _fill_words(the_password, word_layout, use_caps):
+    '''
+    Fills the in the various words within the passphrase.
+    :arg the_password: A list making up the various parts of the passphrase.
+    :arg word_layout: The layout of word lengths for the passphrase.
+    :arg use_caps: A bool of if CAPS words should be used.
+    :returns: the_password with the selected words included
+    '''
     from random import randint
     from random import getrandbits as randbits
 
@@ -350,6 +364,15 @@ def _fill_words(the_password, word_layout, use_caps):
     return the_password
 
 def _fill_breakers(the_password, min_numbers = 0, min_specials = 0, numbers =[], specials = []):
+    '''
+    Fills the in the various words within the passphrase.
+    :arg the_password: A list making up the various parts of the passphrase.
+    :arg min_numbers: The number of numeric characters to include in the passphrase
+    :arg min_specials: The number of special characters to include in the passphrase
+    :arg numbers: A string of possible numbers to pick from
+    :arg specials: A string of possible special characters to pick from
+    :returns: the_password with the numbers and special characters included
+    '''
     from random import randint
 
     breaker_pos = [i for i in range(0, len(the_password) + 1, 2)]
@@ -367,6 +390,11 @@ def _fill_breakers(the_password, min_numbers = 0, min_specials = 0, numbers =[],
     return the_password
 
 def _generate_password(params):
+    '''
+    Creates the required passphrase
+    :arg params: A list making up the various parts of the passphrase.
+    :returns: The complete passphrase
+    '''
     from random import randint
 
     min_len = params['min_length']
@@ -381,21 +409,31 @@ def _generate_password(params):
     if use_specials:
         specials = SPECIALS
         # Remove any excluded special symbols
-        for i in excluded_specials:
-            specials.replace(i, "")
+        if isinstance(excluded_specials, str):
+            for i in excluded_specials:
+                specials.replace(i, "")
 
     # figure out how many characters to reserve min
     reserved_count = 0
-    calc_min = 8
+    # We are setting this to 8 because there smallest word in the dict is 4 and we want to make sure we have at least two words
+    safe_min = 8
     if use_specials:
         reserved_count += min_specials
-        calc_min += min_specials
     if use_numbers:
         reserved_count += min_numbers
-        calc_min += min_numbers
 
-    if calc_min > max_len:
+    safe_min += reserved_count
+
+    if safe_min > max_len:
         pass #Need to error because there is not enough room to generate a password
+
+    if safe_min > min_len:
+        pass #Need to error because there is not enough room to generate a password
+
+    if min_len > max_len:
+        pass
+
+    min_len = min(min_len, max_len - reserved_count)
 
     # Pick random length between min and max subtracting reserved characters
     password_len = randint(min_len, (max_len - reserved_count))
@@ -405,6 +443,7 @@ def _generate_password(params):
     the_password = [''] * ((len(word_layout) * 2) + 1)
     the_password = _fill_words(the_password, word_layout, use_caps)
     the_password = _fill_breakers(the_password, min_numbers, min_specials, NUMBERS, specials )
+    the_password = "".join(the_password)
 
     return the_password
 
@@ -454,26 +493,31 @@ class LookupModule(LookupBase):
             self.set_options(var_options=variables, direct=kwargs)
 
             changed = None
-            relpath, params = self._parse_parameters(term)
-            path = self._loader.path_dwim(relpath)
-            b_path = to_bytes(path, errors='surrogate_or_strict')
             ident = None
             first_process = None
             lockfile = None
+            encrypt = None
+
+            relpath, params = self._parse_parameters(term)
+
+            path = self._loader.path_dwim(relpath)
+            b_path = to_bytes(path, errors='surrogate_or_strict')
 
             try:
                 first_process, lockfile = _get_lock(b_path)
-
                 content = _read_password_file(b_path)
 
+                # If we just want a password without saving it, or there is no file currently
                 if content is None or b_path == to_bytes('/dev/null'):
                     plaintext_password = _generate_password(params)
                     salt = None
                     changed = True
                 else:
+                    # There is a file....Parse the contents
                     plaintext_password, salt, ident = _parse_content(content)
 
-                    encrypt = params['encrypt']
+                # Generate a salt if one doesn't exist and we're encrypting
+                encrypt = params['encrypt']
                 if encrypt and not salt:
                     changed = True
                     try:
@@ -508,7 +552,4 @@ class LookupModule(LookupBase):
                 ret.append(password)
             else:
                 ret.append(plaintext_password)
-
         return ret
-
-
