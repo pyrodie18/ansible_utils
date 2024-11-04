@@ -428,10 +428,10 @@ def _generate_password(params):
     safe_min += reserved_count
 
     if safe_min > max_len:
-        pass # Need to error because there is not enough room to generate a password
+        pass  # Need to error because there is not enough room to generate a password
 
     if safe_min > min_len:
-        pass # Need to error because there is not enough room to generate a password
+        pass  # Need to error because there is not enough room to generate a password
 
     if min_len > max_len:
         pass
@@ -487,8 +487,7 @@ class LookupModule(LookupBase):
         for field in VALID_PARAMS:
             params[field] = self.get_option(field)
 
-        return relpath, params      
-
+        return relpath, params
 
     def run(self, terms, variables, **kwargs):
         ret = []
