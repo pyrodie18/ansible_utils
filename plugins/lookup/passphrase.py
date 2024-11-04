@@ -125,16 +125,14 @@ _raw:
 """
 
 import os
-import string
 import time
 import hashlib
 
 from ansible.errors import AnsibleError, AnsibleAssertionError
-from ansible.module_utils.common.text.converters import to_bytes, to_native, to_text
-from ansible.module_utils.six import string_types
+from ansible.module_utils.common.text.converters import to_bytes, to_text
 from ansible.parsing.splitter import parse_kv
 from ansible.plugins.lookup import LookupBase
-from ansible.utils.encrypt import BaseHash, do_encrypt, random_password, random_salt
+from ansible.utils.encrypt import BaseHash, do_encrypt, random_salt
 from ansible.utils.path import makedirs_safe
 
 
@@ -171,6 +169,7 @@ def _read_password_file(b_path):
         content = to_text(b_content, errors='surrogate_or_strict')
 
     return content
+
 
 def _parse_content(content):
     '''
@@ -291,6 +290,7 @@ def _release_lock(lockfile):
     if os.path.exists(lockfile):
         os.remove(lockfile)
 
+
 def _get_key_layout(target):
     '''
     Determines the randomized pattern of word length that will be used.
@@ -326,13 +326,14 @@ def _get_key_layout(target):
     backtrack(0, [], 0)
 
     # Randomly pick a word length combination from list of possibles
-    word_layout = result[randint(0,len(result) - 1)]
+    word_layout = result[randint(0, len(result) - 1)]
 
     # Randomly pick a single permutation of the word layout
     word_permutations = list(permutations(word_layout))
-    word_layout = word_permutations[randint(0,len(word_permutations) - 1)]
+    word_layout = word_permutations[randint(0, len(word_permutations) - 1)]
 
     return word_layout
+
 
 def _fill_words(the_password, word_layout, use_caps):
     '''
@@ -353,7 +354,7 @@ def _fill_words(the_password, word_layout, use_caps):
 
     for word_len in word_layout:
         # select word of appropriate length
-        the_word = WORDS[word_len][randint(0,len(WORDS[word_len]))]
+        the_word = WORDS[word_len][randint(0, len(WORDS[word_len]))]
         # Decide to CAPS the word
         if use_caps and caps_state:
             the_word = the_word.upper()
@@ -363,7 +364,8 @@ def _fill_words(the_password, word_layout, use_caps):
 
     return the_password
 
-def _fill_breakers(the_password, min_numbers = 0, min_specials = 0, numbers =[], specials = []):
+
+def _fill_breakers(the_password, min_numbers=0, min_specials=0, numbers=[], specials=[]):
     '''
     Fills the in the various words within the passphrase.
     :arg the_password: A list making up the various parts of the passphrase.
@@ -388,6 +390,7 @@ def _fill_breakers(the_password, min_numbers = 0, min_specials = 0, numbers =[],
         the_password[pos] = the_password[pos] + specials[randint(0, len(specials) - 1)]
 
     return the_password
+
 
 def _generate_password(params):
     '''
@@ -425,10 +428,10 @@ def _generate_password(params):
     safe_min += reserved_count
 
     if safe_min > max_len:
-        pass #Need to error because there is not enough room to generate a password
+        pass # Need to error because there is not enough room to generate a password
 
     if safe_min > min_len:
-        pass #Need to error because there is not enough room to generate a password
+        pass # Need to error because there is not enough room to generate a password
 
     if min_len > max_len:
         pass
@@ -442,7 +445,7 @@ def _generate_password(params):
     # Init Final Password Structure
     the_password = [''] * ((len(word_layout) * 2) + 1)
     the_password = _fill_words(the_password, word_layout, use_caps)
-    the_password = _fill_breakers(the_password, min_numbers, min_specials, NUMBERS, specials )
+    the_password = _fill_breakers(the_password, min_numbers, min_specials, NUMBERS, specials)
     the_password = "".join(the_password)
 
     return the_password
@@ -486,7 +489,8 @@ class LookupModule(LookupBase):
 
         return relpath, params      
 
-    def run (self, terms, variables, **kwargs):
+
+    def run(self, terms, variables, **kwargs):
         ret = []
 
         for term in terms:
