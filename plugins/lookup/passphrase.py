@@ -136,7 +136,18 @@ from ansible.utils.encrypt import BaseHash, do_encrypt, random_salt
 from ansible.utils.path import makedirs_safe
 
 
-VALID_PARAMS = frozenset(('encrypt', 'ident', 'min_length', 'max_length', 'use_caps', 'use_numbers', 'use_specials', 'min_numbers', 'min_specials', 'excluded_specials'))
+VALID_PARAMS = frozenset((
+    'encrypt',
+    'ident',
+    'min_length',
+    'max_length',
+    'use_caps',
+    'use_numbers',
+    'use_specials',
+    'min_numbers',
+    'min_specials',
+    'excluded_specials'
+))
 
 
 WORDS = {
@@ -153,6 +164,7 @@ WORDS = {
 }
 NUMBERS = "1234567890"
 SPECIALS = "!@#$%^&*()?.,-_~<>:{}[]"
+
 
 def _read_password_file(b_path):
     '''
@@ -377,7 +389,7 @@ def _fill_breakers(the_password, min_numbers=0, min_specials=0, numbers=[], spec
     '''
     from random import randint
 
-    breaker_pos = [i for i in range(0, len(the_password) + 1, 2)]
+    breaker_pos = list(range(0, len(the_password) + 1, 2))
 
     # Fill in Numbers
     for i in range(min_numbers):
