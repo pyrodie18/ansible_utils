@@ -55,6 +55,9 @@
     
           - name: Install ansible-base (${{ matrix.ansible }})
             run: pip install https://github.com/ansible/ansible/archive/${{ matrix.ansible }}.tar.gz --disable-pip-version-check
+
+          - name: Install passlib
+            run: pip install passlib
     
           # Run the integration tests
           # As we need to connect to an existing docker container we can't use `--docker` here as the VMs would be on different
