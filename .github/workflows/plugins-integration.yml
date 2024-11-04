@@ -66,11 +66,3 @@
             run: ansible-test integration -v --color --continue-on-error --diff --python ${{ matrix.python }} --requirements --coverage
             working-directory: ./ansible_collections/pyrodie18/utils
     
-            # ansible-test support producing code coverage date
-          - name: Generate coverage report
-            run: ansible-test coverage xml -v --requirements --group-by command --group-by version
-            working-directory: ./ansible_collections/pyrodie18/utils
-    
-          - uses: codecov/codecov-action@v4
-            with:
-              fail_ci_if_error: false
