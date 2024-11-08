@@ -1,0 +1,9 @@
+ancestor: null
+releases:
+  1.0.0:
+    changes:
+      major_changes:
+      - passphrase lookup module Created
+    fragments:
+    - init.yml
+    release_date: '2024-11-08'

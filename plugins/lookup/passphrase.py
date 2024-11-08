@@ -377,7 +377,7 @@ def _fill_words(the_password, word_layout, use_caps):
     return the_password
 
 
-def _fill_breakers(the_password, min_numbers=0, min_specials=0, numbers=[], specials=[]):
+def _fill_breakers(the_password, min_numbers=0, min_specials=0, numbers=NUMBERS, specials=SPECIALS):
     '''
     Fills the in the various words within the passphrase.
     :arg the_password: A list making up the various parts of the passphrase.
