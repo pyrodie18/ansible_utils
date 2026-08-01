@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  collection:
+    runs-on: ubuntu-latest
+    env:
+      UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/pyrodie18-utils-venv
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ansible_collections/pyrodie18/utils
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.15"
+          enable-cache: true
+      - name: Install Python
+        run: uv python install 3.12
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Verify lock
+        run: uv lock --check
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Sync environment
+        run: uv sync --frozen --group dev
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Install collection dependencies
+        run: uv run --frozen ansible-galaxy collection install -r requirements.yml -p "${RUNNER_TEMP}/collections"
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Ansible lint
+        run: uv run --frozen ansible-lint
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Python lint
+        run: uv run --frozen flake8 plugins
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Changelog lint
+        run: uv run --frozen antsibull-changelog lint
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Sanity tests
+        run: uv run --frozen ansible-test sanity --python 3.12
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Unit tests
+        run: if [[ -d tests/unit ]]; then uv run --frozen ansible-test units --python 3.12; fi
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Integration tests
+        run: uv run --frozen ansible-test integration test_passphrase --python 3.12
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Build collection
+        run: uv run --frozen ansible-galaxy collection build --force --output-path dist
+        working-directory: ansible_collections/pyrodie18/utils
+      - name: Install built collection
+        run: uv run --frozen ansible-galaxy collection install --force dist/pyrodie18-utils-*.tar.gz -p "${RUNNER_TEMP}/built-collection"
+        working-directory: ansible_collections/pyrodie18/utils

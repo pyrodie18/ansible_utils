@@ -1,0 +1,7 @@
+---
+profile: basic
+exclude_paths:
+  # ansible-test owns behavioral validation of the legacy integration fixture.
+  - tests/integration/
+  # antsibull-changelog owns changelog schema validation.
+  - changelogs/

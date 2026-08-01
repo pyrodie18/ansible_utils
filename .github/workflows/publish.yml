@@ -1,21 +1,32 @@
----
-    name: publish-colection
-    on:
-      release:
-        types: [published]
-    
-    jobs:
-      publish-release:
-        name: Publish Collection Release
-        runs-on: ubuntu-latest
-        steps:
-          - name: Check out code
-            uses: actions/checkout@v4
-    
-          - name: Build Collection
-            id: build-collection
-            uses: ansible-community/github-action-build-collection@main
+name: Publish collection
 
-          - name: Publish Collection to Ansible Galaxy
-            run: ansible-galaxy collection publish ${{ steps.build-collection.outputs.artifact-filename }} --api-key ${{ secrets.ANSIBLE_GALAXY_API }}
-            
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/pyrodie18-utils-venv
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.15"
+          enable-cache: true
+      - name: Install Python
+        run: uv python install 3.12
+      - name: Verify lock and sync
+        run: |
+          uv lock --check
+          uv sync --frozen --group dev
+      - name: Build collection
+        run: uv run --frozen ansible-galaxy collection build --output-path dist
+      - name: Publish collection
+        env:
+          ANSIBLE_GALAXY_API_KEY: ${{ secrets.ANSIBLE_GALAXY_API }}
+        run: uv run --frozen ansible-galaxy collection publish dist/pyrodie18-utils-*.tar.gz --api-key "$ANSIBLE_GALAXY_API_KEY"

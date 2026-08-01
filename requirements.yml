@@ -1,0 +1,4 @@
+---
+# Development/test collection dependencies belong here at exact versions.
+# This collection currently has no external collection dependencies.
+collections: []
