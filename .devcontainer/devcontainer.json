@@ -1,6 +1,6 @@
 {
   "name": "pyrodie18.utils",
-  "image": "ghcr.io/pyrodie18/ansible-dev:2026.08.01",
+  "image": "ghcr.io/pyrodie18/ansible-dev:2026.08.01@sha256:52d742925c08a947d47af7a35dc9bc0a08ae9b9493145bf0a87edcd037c64e35",
   "remoteUser": "vscode",
   "runArgs": [
     "--security-opt",
@@ -10,11 +10,13 @@
   "workspaceFolder": "/workspace/ansible_collections/pyrodie18/utils",
   "containerEnv": {
     "CODEX_HOME": "/home/vscode/.codex",
-    "ANSIBLE_COLLECTIONS_PATH": "/workspace:/home/vscode/.ansible/collections"
+    "ANSIBLE_COLLECTIONS_PATH": "/workspace:/home/vscode/.ansible/collections",
+    "SSH_AUTH_SOCK": "/tmp/codex-dev-ssh-agent.sock"
   },
-  "initializeCommand": "install -d -m 0700 -o 1000 -g 1000 ${localEnv:HOME}/.local/state/codex-dev/pyrodie18.utils",
+  "initializeCommand": "${localEnv:HOME}/devel/dev-environments/scripts/ensure-ssh-agent && install -d -m 0700 -o 1000 -g 1000 ${localEnv:HOME}/.local/state/codex-dev/pyrodie18.utils",
   "mounts": [
     "type=bind,source=${localEnv:HOME}/.local/state/codex-dev/pyrodie18.utils,target=/home/vscode/.codex",
+    "type=bind,source=/run/codex-dev-ssh-agent-1000/agent.sock,target=/tmp/codex-dev-ssh-agent.sock",
     "type=volume,source=pyrodie18-utils-uv-cache,target=/home/vscode/.cache/uv",
     "type=volume,source=pyrodie18-utils-ansible-cache,target=/home/vscode/.ansible"
   ],
